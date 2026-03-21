@@ -134,16 +134,16 @@ ativos_dict = {
         "Café": {"yf": "KC=F", "tv": "ICEUS:KC1!"}
     },
     "₿ Cripto": {
-        "Bitcoin": {"yf": "BTC-USD", "tv": "COINBASE:BTCUSD"},
-        "Ethereum": {"yf": "ETH-USD", "tv": "COINBASE:ETHUSD"},
-        "Solana": {"yf": "SOL-USD", "tv": "COINBASE:SOLUSD"},
+        "Bitcoin": {"yf": "BTC-USD", "tv": "BINANCE:BTCUSDT"},
+        "Ethereum": {"yf": "ETH-USD", "tv": "BINANCE:ETHUSDT"},
+        "Solana": {"yf": "SOL-USD", "tv": "BINANCE:SOLUSDT"},
         "Binance Coin": {"yf": "BNB-USD", "tv": "BINANCE:BNBUSDT"},
-        "XRP": {"yf": "XRP-USD", "tv": "COINBASE:XRPUSD"},
-        "Cardano": {"yf": "ADA-USD", "tv": "COINBASE:ADAUSD"},
-        "Dogecoin": {"yf": "DOGE-USD", "tv": "COINBASE:DOGEUSD"},
-        "Polkadot": {"yf": "DOT-USD", "tv": "COINBASE:DOTUSD"},
-        "Chainlink": {"yf": "LINK-USD", "tv": "COINBASE:LINKUSD"},
-        "Avalanche": {"yf": "AVAX-USD", "tv": "COINBASE:AVAXUSD"}
+        "XRP": {"yf": "XRP-USD", "tv": "BINANCE:XRPUSDT"},
+        "Cardano": {"yf": "ADA-USD", "tv": "BINANCE:ADAUSDT"},
+        "Dogecoin": {"yf": "DOGE-USD", "tv": "BINANCE:DOGEUSDT"},
+        "Polkadot": {"yf": "DOT-USD", "tv": "BINANCE:DOTUSDT"},
+        "Chainlink": {"yf": "LINK-USD", "tv": "BINANCE:LINKUSDT"},
+        "Avalanche": {"yf": "AVAX-USD", "tv": "BINANCE:AVAXUSDT"}
     },
     "🍎 Ações (Blue Chips)": {
         "Apple": {"yf": "AAPL", "tv": "NASDAQ:AAPL"},
@@ -174,7 +174,7 @@ tv_interval = tf_map[timeframe_str]
 ticker_manual = st.sidebar.text_input("Ticker Manual (Ex: AAPL / EURUSD=X)", "")
 if ticker_manual:
     ticker_yf = ticker_manual
-    ticker_tv = ticker_manual.replace("=X", "").replace("-USD", "").split(".")[0]
+    ticker_tv = ticker_manual.replace("=X", "").replace("-USD", "USDT").split(".")[0]
     ativo_label = ticker_manual
 
 # --- 4. EXECUÇÃO DA IA NO BACKGROUND ---
