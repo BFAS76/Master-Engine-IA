@@ -96,7 +96,7 @@ class InstitutionalEngine:
 
         return df, stats, highs_idx, lows_idx
 
-# --- 3. BIBLIOTECA DE ATIVOS EXAUSTIVA (Duplo Mapeamento YF/TV) ---
+# --- 3. BIBLIOTECA DE ATIVOS EXAUSTIVA (Com Fontes de Liquidez Corrigidas) ---
 ativos_dict = {
     "💱 Forex": {
         "EUR/USD": {"yf": "EURUSD=X", "tv": "FX:EURUSD"},
@@ -134,16 +134,16 @@ ativos_dict = {
         "Café": {"yf": "KC=F", "tv": "ICEUS:KC1!"}
     },
     "₿ Cripto": {
-        "Bitcoin": {"yf": "BTC-USD", "tv": "BINANCE:BTCUSD"},
-        "Ethereum": {"yf": "ETH-USD", "tv": "BINANCE:ETHUSD"},
-        "Solana": {"yf": "SOL-USD", "tv": "BINANCE:SOLUSD"},
-        "Binance Coin": {"yf": "BNB-USD", "tv": "BINANCE:BNBUSD"},
-        "XRP": {"yf": "XRP-USD", "tv": "BINANCE:XRPUSD"},
-        "Cardano": {"yf": "ADA-USD", "tv": "BINANCE:ADAUSD"},
-        "Dogecoin": {"yf": "DOGE-USD", "tv": "BINANCE:DOGEUSD"},
-        "Polkadot": {"yf": "DOT-USD", "tv": "BINANCE:DOTUSD"},
-        "Chainlink": {"yf": "LINK-USD", "tv": "BINANCE:LINKUSD"},
-        "Avalanche": {"yf": "AVAX-USD", "tv": "BINANCE:AVAXUSD"}
+        "Bitcoin": {"yf": "BTC-USD", "tv": "COINBASE:BTCUSD"},
+        "Ethereum": {"yf": "ETH-USD", "tv": "COINBASE:ETHUSD"},
+        "Solana": {"yf": "SOL-USD", "tv": "COINBASE:SOLUSD"},
+        "Binance Coin": {"yf": "BNB-USD", "tv": "BINANCE:BNBUSDT"},
+        "XRP": {"yf": "XRP-USD", "tv": "COINBASE:XRPUSD"},
+        "Cardano": {"yf": "ADA-USD", "tv": "COINBASE:ADAUSD"},
+        "Dogecoin": {"yf": "DOGE-USD", "tv": "COINBASE:DOGEUSD"},
+        "Polkadot": {"yf": "DOT-USD", "tv": "COINBASE:DOTUSD"},
+        "Chainlink": {"yf": "LINK-USD", "tv": "COINBASE:LINKUSD"},
+        "Avalanche": {"yf": "AVAX-USD", "tv": "COINBASE:AVAXUSD"}
     },
     "🍎 Ações (Blue Chips)": {
         "Apple": {"yf": "AAPL", "tv": "NASDAQ:AAPL"},
