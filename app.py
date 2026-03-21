@@ -3,11 +3,10 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 import streamlit.components.v1 as components
-import json
 from scipy.signal import argrelextrema
 
 # --- 1. CONFIGURAÇÃO GERAL ---
-st.set_page_config(page_title="Master Engine IA - TV Premium", layout="wide")
+st.set_page_config(page_title="BFAS76 Charts - Master Engine IA", layout="wide")
 st.markdown("""
 <style>
     .main { background-color: #0e1117; }
@@ -97,48 +96,86 @@ class InstitutionalEngine:
 
         return df, stats, highs_idx, lows_idx
 
-# --- 3. BIBLIOTECA DE ATIVOS (Duplo Mapeamento: YF para IA, TV para Gráfico) ---
+# --- 3. BIBLIOTECA DE ATIVOS EXAUSTIVA (Duplo Mapeamento YF/TV) ---
 ativos_dict = {
     "💱 Forex": {
         "EUR/USD": {"yf": "EURUSD=X", "tv": "FX:EURUSD"},
         "GBP/USD": {"yf": "GBPUSD=X", "tv": "FX:GBPUSD"},
         "USD/JPY": {"yf": "JPY=X", "tv": "FX:USDJPY"},
-        "AUD/USD": {"yf": "AUDUSD=X", "tv": "FX:AUDUSD"}
+        "USD/CHF": {"yf": "CHF=X", "tv": "FX:USDCHF"},
+        "AUD/USD": {"yf": "AUDUSD=X", "tv": "FX:AUDUSD"},
+        "USD/CAD": {"yf": "CAD=X", "tv": "FX:USDCAD"},
+        "NZD/USD": {"yf": "NZDUSD=X", "tv": "FX:NZDUSD"},
+        "EUR/GBP": {"yf": "EURGBP=X", "tv": "FX:EURGBP"},
+        "EUR/JPY": {"yf": "EURJPY=X", "tv": "FX:EURJPY"},
+        "GBP/JPY": {"yf": "GBPJPY=X", "tv": "FX:GBPJPY"},
+        "AUD/JPY": {"yf": "AUDJPY=X", "tv": "FX:AUDJPY"}
     },
     "📊 Índices Globais": {
         "S&P 500": {"yf": "^GSPC", "tv": "SP:SPX"},
         "Nasdaq 100": {"yf": "^IXIC", "tv": "NASDAQ:NDX"},
         "Dow Jones (DJI)": {"yf": "^DJI", "tv": "DJ:DJI"},
-        "DAX 40": {"yf": "^GDAXI", "tv": "XETR:DAX"}
+        "Russell 2000": {"yf": "^RUT", "tv": "RUSSELL:RUT"},
+        "DAX 40": {"yf": "^GDAXI", "tv": "XETR:DAX"},
+        "FTSE 100": {"yf": "^FTSE", "tv": "LSE:UKX"},
+        "Nikkei 225": {"yf": "^N225", "tv": "TSE:NI225"},
+        "VIX": {"yf": "^VIX", "tv": "CBOE:VIX"}
     },
     "🏆 Commodities": {
         "Ouro": {"yf": "GC=F", "tv": "COMEX:GC1!"},
         "Prata": {"yf": "SI=F", "tv": "COMEX:SI1!"},
         "Platina": {"yf": "PL=F", "tv": "NYMEX:PL1!"},
-        "Petróleo WTI": {"yf": "CL=F", "tv": "NYMEX:CL1!"}
+        "Cobre": {"yf": "HG=F", "tv": "COMEX:HG1!"},
+        "Petróleo WTI": {"yf": "CL=F", "tv": "NYMEX:CL1!"},
+        "Petróleo Brent": {"yf": "BZ=F", "tv": "NYMEX:BB1!"},
+        "Gás Natural": {"yf": "NG=F", "tv": "NYMEX:NG1!"},
+        "Milho": {"yf": "ZC=F", "tv": "CBOT:ZC1!"},
+        "Trigo": {"yf": "ZW=F", "tv": "CBOT:ZW1!"},
+        "Café": {"yf": "KC=F", "tv": "ICEUS:KC1!"}
     },
     "₿ Cripto": {
         "Bitcoin": {"yf": "BTC-USD", "tv": "BINANCE:BTCUSD"},
         "Ethereum": {"yf": "ETH-USD", "tv": "BINANCE:ETHUSD"},
-        "Solana": {"yf": "SOL-USD", "tv": "BINANCE:SOLUSD"}
+        "Solana": {"yf": "SOL-USD", "tv": "BINANCE:SOLUSD"},
+        "Binance Coin": {"yf": "BNB-USD", "tv": "BINANCE:BNBUSD"},
+        "XRP": {"yf": "XRP-USD", "tv": "BINANCE:XRPUSD"},
+        "Cardano": {"yf": "ADA-USD", "tv": "BINANCE:ADAUSD"},
+        "Dogecoin": {"yf": "DOGE-USD", "tv": "BINANCE:DOGEUSD"},
+        "Polkadot": {"yf": "DOT-USD", "tv": "BINANCE:DOTUSD"},
+        "Chainlink": {"yf": "LINK-USD", "tv": "BINANCE:LINKUSD"},
+        "Avalanche": {"yf": "AVAX-USD", "tv": "BINANCE:AVAXUSD"}
     },
     "🍎 Ações (Blue Chips)": {
         "Apple": {"yf": "AAPL", "tv": "NASDAQ:AAPL"},
+        "Microsoft": {"yf": "MSFT", "tv": "NASDAQ:MSFT"},
         "Nvidia": {"yf": "NVDA", "tv": "NASDAQ:NVDA"},
-        "Tesla": {"yf": "TSLA", "tv": "NASDAQ:TSLA"}
+        "Tesla": {"yf": "TSLA", "tv": "NASDAQ:TSLA"},
+        "Amazon": {"yf": "AMZN", "tv": "NASDAQ:AMZN"},
+        "Alphabet (Google)": {"yf": "GOOGL", "tv": "NASDAQ:GOOGL"},
+        "Meta (Facebook)": {"yf": "META", "tv": "NASDAQ:META"},
+        "JPMorgan": {"yf": "JPM", "tv": "NYSE:JPM"},
+        "Visa": {"yf": "V", "tv": "NYSE:V"},
+        "Berkshire Hathaway": {"yf": "BRK-B", "tv": "NYSE:BRK.B"}
     }
 }
 
-st.sidebar.title("💎 MASTER ENGINE IA")
+st.sidebar.title("💎 BFAS76 CHARTS IA")
+st.sidebar.caption("Institutional Trading Engine | Criado por BFAS76")
 categoria = st.sidebar.selectbox("Mercado", list(ativos_dict.keys()))
 ativo_label = st.sidebar.selectbox("Ativo", list(ativos_dict[categoria].keys()))
 ticker_yf = ativos_dict[categoria][ativo_label]["yf"]
 ticker_tv = ativos_dict[categoria][ativo_label]["tv"]
 
-# Mapeamento do Timeframe para o TradingView Widget
 tf_map = {"5m": "5", "15m": "15", "1h": "60", "4h": "240", "1d": "D"}
 timeframe_str = st.sidebar.selectbox("Timeframe", ["5m", "15m", "1h", "4h", "1d"], index=1)
 tv_interval = tf_map[timeframe_str]
+
+# Lógica de Pesquisa Manual
+ticker_manual = st.sidebar.text_input("Ticker Manual (Ex: AAPL / EURUSD=X)", "")
+if ticker_manual:
+    ticker_yf = ticker_manual
+    ticker_tv = ticker_manual.replace("=X", "").replace("-USD", "").split(".")[0]
+    ativo_label = ticker_manual
 
 # --- 4. EXECUÇÃO DA IA NO BACKGROUND ---
 df_raw = yf.download(ticker_yf, period="30d", interval=timeframe_str, auto_adjust=True, progress=False)
@@ -156,7 +193,7 @@ if not df_raw.empty:
     if direcao == "COMPRA":
         sl, tp1, tp2, tp3 = u['Close'] - r, u['Close'] + (r*1.0), u['Close'] + (r*2.0), u['Close'] + (r*3.0)
     else:
-        sl, u['Close'] + r, u['Close'] - (r*1.0), u['Close'] - (r*2.0), u['Close'] - (r*3.0)
+        sl, tp1, tp2, tp3 = u['Close'] + r, u['Close'] - (r*1.0), u['Close'] - (r*2.0), u['Close'] - (r*3.0)
 
     smc_zones = []
     lista_obs_texto = ""
@@ -182,10 +219,9 @@ if not df_raw.empty:
         prox_onda = "Ciclo 1" if "C" in onda_e else "Onda C"
         progresso_e = f"{(100-s['rsi']):.0f}%"
 
-    # --- 5. O GRÁFICO OFICIAL TRADINGVIEW (A GRANDE MUDANÇA) ---
-    st.subheader(f"📈 Gráfico Oficial TradingView - {ativo_label}")
+    # --- 5. O GRÁFICO OFICIAL TRADINGVIEW ---
+    st.subheader(f"📈 Gráfico Oficial - {ativo_label} | by BFAS76 Charts")
     
-    # Injetar o Widget Advanced da TradingView
     tv_widget_html = f"""
     <div class="tradingview-widget-container" style="height:600px;width:100%">
       <div id="tv_chart_main" style="height:calc(100% - 32px);width:100%"></div>
@@ -213,8 +249,8 @@ if not df_raw.empty:
     """
     components.html(tv_widget_html, height=600)
 
-    # --- 6. MÓDULOS EXPANSÍVEIS DO RELATÓRIO (A TUA ANÁLISE IA) ---
-    st.markdown("### 🔍 Detalhamento Institucional")
+    # --- 6. MÓDULOS EXPANSÍVEIS DO RELATÓRIO ---
+    st.markdown("### 🔍 Detalhamento Institucional - BFAS76 Charts")
 
     def print_terminal(texto):
         st.markdown(f'<pre style="font-family: Consolas, monospace; background-color: #0d1117; color: #d1d4dc; padding: 20px; border: 1px solid #30363d; border-radius: 5px; font-size: 13.5px; white-space: pre-wrap;">{texto.strip()}</pre>', unsafe_allow_html=True)
@@ -232,7 +268,7 @@ if not df_raw.empty:
     with st.expander("🏦 SMART MONEY CONCEPTS (SMC) - ZONAS PARA MARCAÇÃO"):
         print_terminal(f"""
 • Viés Institucional: {'BULLISH' if s['prob_alta'] > 50 else 'BEARISH'}
-• Order Blocks (Zonas de Interesse Validadas pela IA):
+• Order Blocks (Zonas de Interesse Validadas pela IA BFAS76):
 {lista_obs_texto.rstrip()}
 • Fair Value Gaps (FVGs): {s['fvg']} zonas macro
 • Quebras de Estrutura (BOS): {s['bos']} recentes
@@ -277,7 +313,9 @@ if not df_raw.empty:
 • Take Profit 2 (Médio): {tp2:.2f}
 • Take Profit 3 (Swing Institucional): {tp3:.2f}
 • Risco/Retorno Recomendado: {tp_str}
+
+-- Desenvolvido por BFAS76 Charts ©
         """)
 
 else:
-    st.error("Ativo sem dados para este timeframe. Tente outro Ticker.")
+    st.error("Ativo sem dados para este timeframe. Verifique o Ticker ou tente um timeframe maior.")
