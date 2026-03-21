@@ -96,7 +96,7 @@ class InstitutionalEngine:
 
         return df, stats, highs_idx, lows_idx
 
-# --- 3. BIBLIOTECA DE ATIVOS EXAUSTIVA (Com Fontes de Liquidez Corrigidas) ---
+# --- 3. BIBLIOTECA DE ATIVOS EXAUSTIVA (Índices Corrigidos para CFD) ---
 ativos_dict = {
     "💱 Forex": {
         "EUR/USD": {"yf": "EURUSD=X", "tv": "FX:EURUSD"},
@@ -112,14 +112,14 @@ ativos_dict = {
         "AUD/JPY": {"yf": "AUDJPY=X", "tv": "FX:AUDJPY"}
     },
     "📊 Índices Globais": {
-        "S&P 500": {"yf": "^GSPC", "tv": "SP:SPX"},
-        "Nasdaq 100": {"yf": "^IXIC", "tv": "NASDAQ:NDX"},
-        "Dow Jones (DJI)": {"yf": "^DJI", "tv": "DJ:DJI"},
-        "Russell 2000": {"yf": "^RUT", "tv": "RUSSELL:RUT"},
-        "DAX 40": {"yf": "^GDAXI", "tv": "XETR:DAX"},
-        "FTSE 100": {"yf": "^FTSE", "tv": "LSE:UKX"},
-        "Nikkei 225": {"yf": "^N225", "tv": "TSE:NI225"},
-        "VIX": {"yf": "^VIX", "tv": "CBOE:VIX"}
+        "S&P 500": {"yf": "^GSPC", "tv": "CAPITALCOM:US500"},
+        "Nasdaq 100": {"yf": "^IXIC", "tv": "CAPITALCOM:US100"},
+        "Dow Jones (DJI)": {"yf": "^DJI", "tv": "CAPITALCOM:US30"},
+        "Russell 2000": {"yf": "^RUT", "tv": "CAPITALCOM:US2000"},
+        "DAX 40": {"yf": "^GDAXI", "tv": "CAPITALCOM:DE40"},
+        "FTSE 100": {"yf": "^FTSE", "tv": "CAPITALCOM:UK100"},
+        "Nikkei 225": {"yf": "^N225", "tv": "CAPITALCOM:JP225"},
+        "VIX": {"yf": "^VIX", "tv": "TVC:VIX"}
     },
     "🏆 Commodities": {
         "Ouro": {"yf": "GC=F", "tv": "COMEX:GC1!"},
@@ -219,11 +219,11 @@ if not df_raw.empty:
         prox_onda = "Ciclo 1" if "C" in onda_e else "Onda C"
         progresso_e = f"{(100-s['rsi']):.0f}%"
 
-    # --- 5. O GRÁFICO OFICIAL TRADINGVIEW ---
+    # --- 5. O GRÁFICO OFICIAL TRADINGVIEW (Com Ferramentas de Desenho Forçadas) ---
     st.subheader(f"📈 Gráfico Oficial - {ativo_label} | by BFAS76 Charts")
     
     tv_widget_html = f"""
-    <div class="tradingview-widget-container" style="height:600px;width:100%">
+    <div class="tradingview-widget-container" style="height:650px;width:100%">
       <div id="tv_chart_main" style="height:calc(100% - 32px);width:100%"></div>
       <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
       <script type="text/javascript">
@@ -237,9 +237,10 @@ if not df_raw.empty:
       "style": "1",
       "locale": "pt",
       "enable_publishing": false,
+      "hide_side_toolbar": false,
+      "allow_symbol_change": true,
       "backgroundColor": "#0e1117",
       "gridColor": "#1f2937",
-      "allow_symbol_change": true,
       "toolbar_bg": "#161b22",
       "container_id": "tv_chart_main"
     }}
@@ -247,7 +248,7 @@ if not df_raw.empty:
       </script>
     </div>
     """
-    components.html(tv_widget_html, height=600)
+    components.html(tv_widget_html, height=650)
 
     # --- 6. MÓDULOS EXPANSÍVEIS DO RELATÓRIO ---
     st.markdown("### 🔍 Detalhamento Institucional - BFAS76 Charts")
