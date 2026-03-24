@@ -96,7 +96,7 @@ class InstitutionalEngine:
 
         return df, stats, highs_idx, lows_idx
 
-# --- 3. BIBLIOTECA DE ATIVOS EXAUSTIVA (Índices Corrigidos para CFD) ---
+# --- 3. BIBLIOTECA DE ATIVOS EXAUSTIVA (COMMODITIES CORRIGIDAS PARA CFD) ---
 ativos_dict = {
     "💱 Forex": {
         "EUR/USD": {"yf": "EURUSD=X", "tv": "FX:EURUSD"},
@@ -122,16 +122,16 @@ ativos_dict = {
         "VIX": {"yf": "^VIX", "tv": "TVC:VIX"}
     },
     "🏆 Commodities": {
-        "Ouro": {"yf": "GC=F", "tv": "COMEX:GC1!"},
-        "Prata": {"yf": "SI=F", "tv": "COMEX:SI1!"},
-        "Platina": {"yf": "PL=F", "tv": "NYMEX:PL1!"},
-        "Cobre": {"yf": "HG=F", "tv": "COMEX:HG1!"},
-        "Petróleo WTI": {"yf": "CL=F", "tv": "NYMEX:CL1!"},
-        "Petróleo Brent": {"yf": "BZ=F", "tv": "NYMEX:BB1!"},
-        "Gás Natural": {"yf": "NG=F", "tv": "NYMEX:NG1!"},
-        "Milho": {"yf": "ZC=F", "tv": "CBOT:ZC1!"},
-        "Trigo": {"yf": "ZW=F", "tv": "CBOT:ZW1!"},
-        "Café": {"yf": "KC=F", "tv": "ICEUS:KC1!"}
+        "Ouro": {"yf": "GC=F", "tv": "TVC:GOLD"},
+        "Prata": {"yf": "SI=F", "tv": "TVC:SILVER"},
+        "Platina": {"yf": "PL=F", "tv": "TVC:PLATINUM"},
+        "Cobre": {"yf": "HG=F", "tv": "CAPITALCOM:COPPER"},
+        "Petróleo WTI": {"yf": "CL=F", "tv": "TVC:USOIL"},
+        "Petróleo Brent": {"yf": "BZ=F", "tv": "TVC:UKOIL"},
+        "Gás Natural": {"yf": "NG=F", "tv": "TVC:NATGAS"},
+        "Milho": {"yf": "ZC=F", "tv": "CAPITALCOM:CORN"},
+        "Trigo": {"yf": "ZW=F", "tv": "CAPITALCOM:WHEAT"},
+        "Café": {"yf": "KC=F", "tv": "CAPITALCOM:COFFEE"}
     },
     "₿ Cripto": {
         "Bitcoin": {"yf": "BTC-USD", "tv": "BINANCE:BTCUSDT"},
@@ -219,7 +219,7 @@ if not df_raw.empty:
         prox_onda = "Ciclo 1" if "C" in onda_e else "Onda C"
         progresso_e = f"{(100-s['rsi']):.0f}%"
 
-    # --- 5. O GRÁFICO OFICIAL TRADINGVIEW (Com Ferramentas de Desenho Forçadas) ---
+    # --- 5. O GRÁFICO OFICIAL TRADINGVIEW ---
     st.subheader(f"📈 Gráfico Oficial - {ativo_label} | by BFAS76 Charts")
     
     tv_widget_html = f"""
