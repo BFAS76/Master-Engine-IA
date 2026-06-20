@@ -1,0 +1,3 @@
+# System packages for devcontainer (apt)
+# Add system-level dependencies here, one per line
+# Example: libssl-dev
