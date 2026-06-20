@@ -5,6 +5,7 @@ import yfinance as yf
 
 from src.engine import InstitutionalEngine
 from src.assets import ASSETS
+from src.chart import build_chart
 
 st.set_page_config(page_title="BFAS76 Charts - Master Engine IA", layout="wide")
 st.markdown("""
@@ -138,6 +139,11 @@ components.html(f"""
   </script>
 </div>
 """, height=650)
+
+# --- GRÁFICO DE ANÁLISE PLOTLY ---
+st.markdown("### 📊 Gráfico de Análise - BFAS76 Engine")
+fig = build_chart(df, s, sl, tp1, tp2, tp3, direcao, ativo_label)
+st.plotly_chart(fig, use_container_width=True)
 
 # --- MÓDULOS RELATÓRIO ---
 st.markdown("### 🔍 Detalhamento Institucional - BFAS76 Charts")
