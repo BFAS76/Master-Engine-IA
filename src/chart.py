@@ -101,8 +101,8 @@ def build_chart(
         )
 
     # --- ENTRY SIGNAL ARROW ---
-    arrow_y  = float(df["Low"].iloc[-1])  * 0.9995 if direcao == "COMPRA" else float(df["High"].iloc[-1]) * 1.0005
-    arrow_ay = -30 if direcao == "COMPRA" else 30
+    arrow_y  = float(df["Low"].iloc[-1])  * 0.9990 if direcao == "COMPRA" else float(df["High"].iloc[-1]) * 1.0010
+    arrow_ay = 40 if direcao == "COMPRA" else -40
     fig.add_annotation(
         x=idx[-1], y=arrow_y,
         text="▲ COMPRA" if direcao == "COMPRA" else "▼ VENDA",
