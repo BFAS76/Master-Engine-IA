@@ -142,7 +142,7 @@ components.html(f"""
 
 # --- GRÁFICO DE ANÁLISE PLOTLY ---
 st.markdown("### 📊 Gráfico de Análise - BFAS76 Engine")
-fig = build_chart(df, s, sl, tp1, tp2, tp3, direcao, ativo_label)
+fig = build_chart(df, s, sl, tp1, tp2, tp3, direcao, ativo_label, idx_h, idx_l)
 st.plotly_chart(fig, use_container_width=True)
 
 # --- MÓDULOS RELATÓRIO ---

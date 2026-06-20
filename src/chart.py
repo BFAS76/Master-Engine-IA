@@ -4,6 +4,63 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 
+# Fibonacci ratios: (XD_ratio, label)
+_HARMONIC_RATIOS = {
+    "Gartley": 0.618,
+    "Cypher":  0.786,
+    "Bat":     0.886,
+    "Shark":   1.130,
+    "Crab":    1.618,
+}
+
+
+def _identify_harmonic(x, a, b, c, d) -> tuple[str, float] | None:
+    """
+    Check XABCD points against known harmonic Fibonacci ratios.
+    Returns (pattern_name, completion_pct) or None.
+    """
+    xa = abs(a - x)
+    xd = abs(d - x)
+    if xa < 1e-10:
+        return None
+    ratio = xd / xa
+    best_name, best_diff = None, 0.20  # tolerance
+    for name, target in _HARMONIC_RATIOS.items():
+        diff = abs(ratio - target)
+        if diff < best_diff:
+            best_diff = diff
+            best_name = name
+    if best_name is None:
+        return None
+    completion = max(0.0, 100.0 - best_diff * 500)
+    return best_name, completion
+
+
+def _build_xabcd(df: pd.DataFrame, highs_idx: np.ndarray, lows_idx: np.ndarray) -> list | None:
+    """
+    Build alternating swing points for XABCD harmonic pattern.
+    Returns list of (index_position, price, label) or None if not enough swings.
+    """
+    # Merge highs and lows, sort by position
+    highs = [(i, float(df["High"].iloc[i]), "H") for i in highs_idx if i < len(df)]
+    lows  = [(i, float(df["Low"].iloc[i]),  "L") for i in lows_idx  if i < len(df)]
+    swings = sorted(highs + lows, key=lambda x: x[0])
+
+    # Keep only alternating H/L
+    alternating = []
+    for pos, price, kind in swings:
+        if not alternating or alternating[-1][2] != kind:
+            alternating.append((pos, price, kind))
+
+    if len(alternating) < 5:
+        return None
+
+    # Take last 5 alternating swings as X A B C D
+    pts = alternating[-5:]
+    labels = ["X", "A", "B", "C", "D"]
+    return [(p[0], p[1], lbl) for p, lbl in zip(pts, labels)]
+
+
 def build_chart(
     df: pd.DataFrame,
     stats: dict,
@@ -13,6 +70,8 @@ def build_chart(
     tp3: float,
     direcao: str,
     ativo_label: str,
+    highs_idx: np.ndarray | None = None,
+    lows_idx: np.ndarray | None = None,
 ) -> go.Figure:
     """Candlestick chart with all analysis overlays."""
 
@@ -53,6 +112,51 @@ def build_chart(
         name="SMA 20",
         line=dict(color="#7b61ff", width=1, dash="dot"),
     ), row=1, col=1)
+
+    # --- PADRÕES HARMÓNICOS ---
+    if highs_idx is not None and lows_idx is not None:
+        xabcd = _build_xabcd(df, highs_idx, lows_idx)
+        if xabcd:
+            prices = [p for _, p, _ in xabcd]
+            result = _identify_harmonic(*prices)
+            h_color = "#f7c948"
+            # Draw zigzag lines X→A→B→C→D
+            x_coords = [idx[pos] for pos, _, _ in xabcd]
+            y_coords = [p for _, p, _ in xabcd]
+            fig.add_trace(go.Scatter(
+                x=x_coords, y=y_coords,
+                mode="lines",
+                name="Harmónico",
+                line=dict(color=h_color, width=1.5, dash="dot"),
+                showlegend=True,
+            ), row=1, col=1)
+            # Labels at each point
+            for xi, (pos, price, lbl) in enumerate(xabcd):
+                is_high = price == max(y_coords[max(0, xi-1):xi+2])
+                fig.add_annotation(
+                    x=idx[pos], y=price,
+                    text=lbl,
+                    showarrow=False,
+                    font=dict(color=h_color, size=11, family="Consolas"),
+                    yshift=10 if (xi == 0 or price >= y_coords[xi-1]) else -10,
+                    row=1, col=1,
+                )
+            # Pattern name label at D point
+            if result:
+                pname, pct = result
+                dpos, dprice, _ = xabcd[-1]
+                fig.add_annotation(
+                    x=idx[dpos], y=dprice,
+                    text=f"{pname} {pct:.0f}%",
+                    showarrow=True,
+                    arrowhead=1,
+                    arrowcolor=h_color,
+                    font=dict(color=h_color, size=10, family="Consolas"),
+                    bgcolor="#161b22",
+                    bordercolor=h_color,
+                    ax=40, ay=-30,
+                    row=1, col=1,
+                )
 
     # --- ORDER BLOCKS ---
     ob_df = df[df["OB"]].tail(5)
