@@ -117,44 +117,81 @@ def build_chart(
     if highs_idx is not None and lows_idx is not None:
         xabcd = _build_xabcd(df, highs_idx, lows_idx)
         if xabcd:
-            prices = [p for _, p, _ in xabcd]
-            result = _identify_harmonic(*prices)
-            h_color = "#f7c948"
-            # Draw zigzag lines X→A→B→C→D
+            prices  = [p   for _, p, _ in xabcd]
             x_coords = [idx[pos] for pos, _, _ in xabcd]
-            y_coords = [p for _, p, _ in xabcd]
+            result  = _identify_harmonic(*prices)
+            pname   = result[0] if result else "Harmónico"
+            # Color by bullish/bearish: D higher than X = bearish pattern reversal
+            is_bearish_pat = prices[4] > prices[0]
+            h_color = "#ef5350" if is_bearish_pat else "#26a69a"
+            fill_color = "rgba(239,83,80,0.08)" if is_bearish_pat else "rgba(38,166,154,0.08)"
+
+            # Filled polygon X→A→B→C→D→X
+            poly_x = x_coords + [x_coords[0]]
+            poly_y = prices    + [prices[0]]
             fig.add_trace(go.Scatter(
-                x=x_coords, y=y_coords,
+                x=poly_x, y=poly_y,
+                fill="toself",
+                fillcolor=fill_color,
+                line=dict(color=h_color, width=1.5),
+                name=pname,
                 mode="lines",
-                name="Harmónico",
-                line=dict(color=h_color, width=1.5, dash="dot"),
                 showlegend=True,
             ), row=1, col=1)
-            # Labels at each point
-            for xi, (pos, price, lbl) in enumerate(xabcd):
-                is_high = price == max(y_coords[max(0, xi-1):xi+2])
+
+            # Fibonacci ratio on each leg midpoint
+            legs = [(0,1,"XA"), (1,2,"AB"), (2,3,"BC"), (3,4,"CD")]
+            leg_lengths = [abs(prices[b] - prices[a]) for a, b, _ in legs]
+            for i, (a, b, leg_name) in enumerate(legs):
+                xa_len = leg_lengths[0]
+                prev_len = leg_lengths[i-1] if i > 0 else xa_len
+                ratio = leg_lengths[i] / prev_len if prev_len > 1e-10 else 0
+                # Midpoint timestamp (approximate via index)
+                pa, pb = xabcd[a][0], xabcd[b][0]
+                mid_pos = (pa + pb) // 2
+                mid_pos = max(0, min(mid_pos, len(idx) - 1))
+                mid_price = (prices[a] + prices[b]) / 2
+                offset = (df["ATR"].iloc[-1] * 0.3) if "ATR" in df.columns else 0
                 fig.add_annotation(
-                    x=idx[pos], y=price,
-                    text=lbl,
+                    x=idx[mid_pos], y=mid_price + offset,
+                    text=f"{ratio:.3f}",
                     showarrow=False,
-                    font=dict(color=h_color, size=11, family="Consolas"),
-                    yshift=10 if (xi == 0 or price >= y_coords[xi-1]) else -10,
+                    font=dict(color=h_color, size=9, family="Consolas"),
+                    bgcolor="rgba(22,27,34,0.8)",
+                    bordercolor=h_color,
+                    borderwidth=1,
                     row=1, col=1,
                 )
-            # Pattern name label at D point
+
+            # Point labels X A B C D in boxes
+            for xi, (pos, price, lbl) in enumerate(xabcd):
+                above = (xi == 0) or (price >= prices[xi - 1])
+                yshift = 14 if above else -14
+                fig.add_annotation(
+                    x=idx[pos], y=price,
+                    text=f"<b>{lbl}</b>",
+                    showarrow=False,
+                    font=dict(color="#ffffff", size=11, family="Consolas"),
+                    bgcolor=h_color,
+                    bordercolor=h_color,
+                    borderwidth=1,
+                    yshift=yshift,
+                    row=1, col=1,
+                )
+
+            # Pattern name + completion at D
             if result:
-                pname, pct = result
+                pct = result[1]
                 dpos, dprice, _ = xabcd[-1]
                 fig.add_annotation(
                     x=idx[dpos], y=dprice,
-                    text=f"{pname} {pct:.0f}%",
-                    showarrow=True,
-                    arrowhead=1,
+                    text=f"<b>{pname} {pct:.0f}%</b>",
+                    showarrow=True, arrowhead=2,
                     arrowcolor=h_color,
                     font=dict(color=h_color, size=10, family="Consolas"),
                     bgcolor="#161b22",
                     bordercolor=h_color,
-                    ax=40, ay=-30,
+                    ax=50, ay=-35,
                     row=1, col=1,
                 )
 
