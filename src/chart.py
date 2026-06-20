@@ -158,14 +158,18 @@ def build_chart(
                     row=1, col=1,
                 )
 
-    # --- ORDER BLOCKS ---
-    ob_df = df[df["OB"]].tail(5)
-    for i, (ts, row) in enumerate(ob_df.iterrows()):
-        is_bull = row["Close"] > row["Open"]
-        color = "rgba(38,166,154,0.15)" if is_bull else "rgba(239,83,80,0.15)"
-        border = "#26a69a" if is_bull else "#ef5350"
-        label = "Bullish OB" if is_bull else "Bearish OB"
-        # Extend OB zone to right edge
+    # --- ORDER BLOCKS (SMC corrected) ---
+    # Bullish OB = bearish candle before bullish impulse → support zone below price
+    # Bearish OB = bullish candle before bearish impulse → resistance zone above price
+    ob_sets = []
+    if "BullishOB" in df.columns:
+        for ts, row in df[df["BullishOB"]].tail(3).iterrows():
+            ob_sets.append((ts, row, "Bullish OB", "rgba(38,166,154,0.20)", "#26a69a"))
+    if "BearishOB" in df.columns:
+        for ts, row in df[df["BearishOB"]].tail(3).iterrows():
+            ob_sets.append((ts, row, "Bearish OB", "rgba(239,83,80,0.20)", "#ef5350"))
+
+    for ts, row, label, color, border in ob_sets:
         x_end = idx[-1]
         body_top = max(row["Open"], row["Close"])
         body_bot = min(row["Open"], row["Close"])
@@ -174,11 +178,11 @@ def build_chart(
             x0=ts, x1=x_end,
             y0=body_bot, y1=body_top,
             fillcolor=color,
-            line=dict(color=border, width=1),
+            line=dict(color=border, width=1, dash="dot"),
             row=1, col=1,
         )
         fig.add_annotation(
-            x=ts, y=body_top,
+            x=ts, y=body_top if "Bearish" in label else body_bot,
             text=label,
             showarrow=False,
             font=dict(size=9, color=border),

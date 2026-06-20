@@ -54,7 +54,22 @@ class InstitutionalEngine:
         var_95 = float(np.percentile(returns, 5)) * 100
 
         df["Body"] = (close - df["Open"]).abs()
-        df["OB"] = df["Body"] > df["Body"].rolling(20).mean() * 2
+
+        # SMC Order Block detection (corrected):
+        # Bullish OB = last BEARISH candle before strong bullish impulse (support below price)
+        # Bearish OB = last BULLISH candle before strong bearish impulse (resistance above price)
+        impulse = df["ATR"] * 1.5
+        df["BullishOB"] = (
+            (close < df["Open"]) &                          # bearish candle
+            (close.shift(-3) > high + impulse.shift(-3))   # strong up move within 3 candles
+        )
+        df["BearishOB"] = (
+            (close > df["Open"]) &                          # bullish candle
+            (close.shift(-3) < low - impulse.shift(-3))    # strong down move within 3 candles
+        )
+        # Keep legacy OB column for stats count
+        df["OB"] = df["BullishOB"] | df["BearishOB"]
+
         fvg_count = int(
             (low.shift(-1) > high.shift(1)).sum() + (high.shift(-1) < low.shift(1)).sum()
         )
