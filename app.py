@@ -21,9 +21,12 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
+_PERIODO = {"5m": "5d", "15m": "60d", "1h": "730d", "4h": "730d", "1d": "5y"}
+
 @st.cache_data(ttl=3600, show_spinner="A carregar dados de mercado...")
 def carregar_dados(ticker: str, intervalo: str) -> pd.DataFrame:
-    df = yf.download(ticker, period="30d", interval=intervalo, auto_adjust=True, progress=False)
+    periodo = _PERIODO.get(intervalo, "60d")
+    df = yf.download(ticker, period=periodo, interval=intervalo, auto_adjust=True, progress=False)
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = df.columns.get_level_values(0)
     return df
