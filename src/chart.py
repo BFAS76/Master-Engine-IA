@@ -38,28 +38,42 @@ def _identify_harmonic(x, a, b, c, d) -> tuple[str, float] | None:
 
 def _build_xabcd(df: pd.DataFrame, highs_idx: np.ndarray, lows_idx: np.ndarray) -> list | None:
     """
-    Build XABCD harmonic points from alternating swing highs/lows.
-    Tries both H-L-H-L-H and L-H-L-H-L sequences, returns best harmonic match.
+    Build XABCD harmonic points from significant alternating swing highs/lows.
+    Filters minor swings: only keeps swings with amplitude > 1.5 * ATR.
     """
+    atr_mean = float(df["ATR"].dropna().mean()) if "ATR" in df.columns else 0.0
+    min_move = atr_mean * 0.5
+
     highs = [(i, float(df["High"].iloc[i]), "H") for i in highs_idx if i < len(df)]
     lows  = [(i, float(df["Low"].iloc[i]),  "L") for i in lows_idx  if i < len(df)]
     swings = sorted(highs + lows, key=lambda s: s[0])
 
-    # Enforce strict alternation
+    # Strict alternation
     alternating: list = []
     for pos, price, kind in swings:
         if not alternating or alternating[-1][2] != kind:
             alternating.append((pos, price, kind))
+
+    # Filter: only keep swings where amplitude to previous swing >= min_move
+    if min_move > 0:
+        significant: list = []
+        for i, (pos, price, kind) in enumerate(alternating):
+            if i == 0:
+                significant.append((pos, price, kind))
+            else:
+                prev_price = significant[-1][1] if significant else alternating[i-1][1]
+                if abs(price - prev_price) >= min_move:
+                    significant.append((pos, price, kind))
+        alternating = significant
 
     if len(alternating) < 5:
         return None
 
     labels = ["X", "A", "B", "C", "D"]
     best_pts   = None
-    best_score = 99.0  # lower = better match to any harmonic ratio
+    best_score = 99.0
 
-    # Try every window of 5 from the last 8 swings
-    candidates = alternating[-8:]
+    candidates = alternating[-10:]
     for start in range(len(candidates) - 4):
         window = candidates[start:start + 5]
         prices = [p for _, p, _ in window]
@@ -71,7 +85,6 @@ def _build_xabcd(df: pd.DataFrame, highs_idx: np.ndarray, lows_idx: np.ndarray) 
                 best_score = score
                 best_pts   = window
 
-    # Fallback: just use the last 5 alternating swings
     if best_pts is None:
         best_pts = alternating[-5:]
 
@@ -92,9 +105,23 @@ def build_chart(
 ) -> go.Figure:
     """Candlestick chart with all analysis overlays."""
 
+    # Build XABCD from full df BEFORE tailing (positions are in full-df space)
+    xabcd_result = None
+    if highs_idx is not None and lows_idx is not None:
+        xabcd_result = _build_xabcd(df, highs_idx, lows_idx)
+
     # Use last 200 candles max for readability
+    n_full = len(df)
     df = df.tail(200).copy()
+    tail_offset = n_full - len(df)  # absolute pos = tail_offset + tail_pos
     idx = df.index
+
+    def abs_to_idx(pos: int):
+        """Convert absolute df position to DatetimeIndex timestamp."""
+        tail_pos = pos - tail_offset
+        if 0 <= tail_pos < len(idx):
+            return idx[tail_pos]
+        return None
 
     fig = make_subplots(
         rows=3, cols=1,
@@ -131,42 +158,40 @@ def build_chart(
     ), row=1, col=1)
 
     # --- PADRÕES HARMÓNICOS ---
-    if highs_idx is not None and lows_idx is not None:
-        xabcd = _build_xabcd(df, highs_idx, lows_idx)
-        if xabcd:
-            prices  = [p   for _, p, _ in xabcd]
-            x_coords = [idx[pos] for pos, _, _ in xabcd]
-            result  = _identify_harmonic(*prices)
-            pname   = result[0] if result else "Harmónico"
-            # Color by bullish/bearish: D higher than X = bearish pattern reversal
-            is_bearish_pat = prices[4] > prices[0]
-            h_color = "#ef5350" if is_bearish_pat else "#26a69a"
-            fill_color = "rgba(239,83,80,0.08)" if is_bearish_pat else "rgba(38,166,154,0.08)"
+    xabcd = xabcd_result
+    if xabcd:
+            # Convert absolute positions to timestamps; skip points outside tail window
+            ts_coords = [abs_to_idx(pos) for pos, _, _ in xabcd]
+            prices     = [p for _, p, _ in xabcd]
+            # Only draw if all 5 points are visible in tail
+            if all(ts is not None for ts in ts_coords):
+                result  = _identify_harmonic(*prices)
+                pname   = result[0] if result else "Harmónico"
+                is_bearish_pat = prices[4] > prices[0]
+                h_color = "#ef5350" if is_bearish_pat else "#26a69a"
 
-            # Zigzag lines X→A→B→C→D (no fill)
-            fig.add_trace(go.Scatter(
-                x=x_coords, y=prices,
-                line=dict(color=h_color, width=1.5),
-                name=pname,
-                mode="lines",
-                showlegend=True,
-            ), row=1, col=1)
+                # Zigzag lines X→A→B→C→D
+                fig.add_trace(go.Scatter(
+                    x=ts_coords, y=prices,
+                    line=dict(color=h_color, width=1.5),
+                    name=pname,
+                    mode="lines",
+                    showlegend=True,
+                ), row=1, col=1)
 
-            # Fibonacci ratio on each leg midpoint
-            legs = [(0,1,"XA"), (1,2,"AB"), (2,3,"BC"), (3,4,"CD")]
-            leg_lengths = [abs(prices[b] - prices[a]) for a, b, _ in legs]
-            for i, (a, b, leg_name) in enumerate(legs):
-                xa_len = leg_lengths[0]
-                prev_len = leg_lengths[i-1] if i > 0 else xa_len
-                ratio = leg_lengths[i] / prev_len if prev_len > 1e-10 else 0
-                # Midpoint timestamp (approximate via index)
-                pa, pb = xabcd[a][0], xabcd[b][0]
-                mid_pos = (pa + pb) // 2
-                mid_pos = max(0, min(mid_pos, len(idx) - 1))
-                mid_price = (prices[a] + prices[b]) / 2
-                offset = (df["ATR"].iloc[-1] * 0.3) if "ATR" in df.columns else 0
+                # Fibonacci ratio on each leg midpoint
+                legs = [(0,1,"XA"), (1,2,"AB"), (2,3,"BC"), (3,4,"CD")]
+                leg_lengths = [abs(prices[b] - prices[a]) for a, b, _ in legs]
+                for i, (a, b, leg_name) in enumerate(legs):
+                    prev_len = leg_lengths[i-1] if i > 0 else leg_lengths[0]
+                    ratio = leg_lengths[i] / prev_len if prev_len > 1e-10 else 0
+                    pa, pb = xabcd[a][0], xabcd[b][0]
+                    mid_pos = (pa + pb) // 2
+                    mid_ts  = abs_to_idx(mid_pos) or ts_coords[a]
+                    mid_price = (prices[a] + prices[b]) / 2
+                    offset = (df["ATR"].iloc[-1] * 0.3) if "ATR" in df.columns else 0
                 fig.add_annotation(
-                    x=idx[mid_pos], y=mid_price + offset,
+                    x=mid_ts, y=mid_price + offset,
                     text=f"{ratio:.3f}",
                     showarrow=False,
                     font=dict(color=h_color, size=9, family="Consolas"),
@@ -176,37 +201,42 @@ def build_chart(
                     row=1, col=1,
                 )
 
-            # Point labels X A B C D in boxes
-            for xi, (pos, price, lbl) in enumerate(xabcd):
-                above = (xi == 0) or (price >= prices[xi - 1])
-                yshift = 14 if above else -14
-                fig.add_annotation(
-                    x=idx[pos], y=price,
-                    text=f"<b>{lbl}</b>",
-                    showarrow=False,
-                    font=dict(color="#ffffff", size=11, family="Consolas"),
-                    bgcolor=h_color,
-                    bordercolor=h_color,
-                    borderwidth=1,
-                    yshift=yshift,
-                    row=1, col=1,
-                )
+                # Point labels X A B C D in boxes
+                for xi, (pos, price, lbl) in enumerate(xabcd):
+                    ts = abs_to_idx(pos)
+                    if ts is None:
+                        continue
+                    above = (xi == 0) or (price >= prices[xi - 1])
+                    yshift = 14 if above else -14
+                    fig.add_annotation(
+                        x=ts, y=price,
+                        text=f"<b>{lbl}</b>",
+                        showarrow=False,
+                        font=dict(color="#ffffff", size=11, family="Consolas"),
+                        bgcolor=h_color,
+                        bordercolor=h_color,
+                        borderwidth=1,
+                        yshift=yshift,
+                        row=1, col=1,
+                    )
 
-            # Pattern name + completion at D
-            if result:
-                pct = result[1]
-                dpos, dprice, _ = xabcd[-1]
-                fig.add_annotation(
-                    x=idx[dpos], y=dprice,
-                    text=f"<b>{pname} {pct:.0f}%</b>",
-                    showarrow=True, arrowhead=2,
-                    arrowcolor=h_color,
-                    font=dict(color=h_color, size=10, family="Consolas"),
-                    bgcolor="#161b22",
-                    bordercolor=h_color,
-                    ax=50, ay=-35,
-                    row=1, col=1,
-                )
+                # Pattern name + completion at D
+                if result:
+                    pct = result[1]
+                    dpos, dprice, _ = xabcd[-1]
+                    d_ts = abs_to_idx(dpos)
+                    if d_ts is not None:
+                        fig.add_annotation(
+                            x=d_ts, y=dprice,
+                            text=f"<b>{pname} {pct:.0f}%</b>",
+                            showarrow=True, arrowhead=2,
+                            arrowcolor=h_color,
+                            font=dict(color=h_color, size=10, family="Consolas"),
+                            bgcolor="#161b22",
+                            bordercolor=h_color,
+                            ax=50, ay=-35,
+                            row=1, col=1,
+                        )
 
     # --- ORDER BLOCKS (SMC corrected) ---
     # Bullish OB = bearish candle before bullish impulse → support zone below price
