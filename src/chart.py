@@ -38,16 +38,15 @@ def _identify_harmonic(x, a, b, c, d) -> tuple[str, float] | None:
 
 def _build_xabcd(df: pd.DataFrame, highs_idx: np.ndarray, lows_idx: np.ndarray) -> list | None:
     """
-    Build alternating swing points for XABCD harmonic pattern.
-    Returns list of (index_position, price, label) or None if not enough swings.
+    Build XABCD harmonic points from alternating swing highs/lows.
+    Tries both H-L-H-L-H and L-H-L-H-L sequences, returns best harmonic match.
     """
-    # Merge highs and lows, sort by position
     highs = [(i, float(df["High"].iloc[i]), "H") for i in highs_idx if i < len(df)]
     lows  = [(i, float(df["Low"].iloc[i]),  "L") for i in lows_idx  if i < len(df)]
-    swings = sorted(highs + lows, key=lambda x: x[0])
+    swings = sorted(highs + lows, key=lambda s: s[0])
 
-    # Keep only alternating H/L
-    alternating = []
+    # Enforce strict alternation
+    alternating: list = []
     for pos, price, kind in swings:
         if not alternating or alternating[-1][2] != kind:
             alternating.append((pos, price, kind))
@@ -55,10 +54,28 @@ def _build_xabcd(df: pd.DataFrame, highs_idx: np.ndarray, lows_idx: np.ndarray) 
     if len(alternating) < 5:
         return None
 
-    # Take last 5 alternating swings as X A B C D
-    pts = alternating[-5:]
     labels = ["X", "A", "B", "C", "D"]
-    return [(p[0], p[1], lbl) for p, lbl in zip(pts, labels)]
+    best_pts   = None
+    best_score = 99.0  # lower = better match to any harmonic ratio
+
+    # Try every window of 5 from the last 8 swings
+    candidates = alternating[-8:]
+    for start in range(len(candidates) - 4):
+        window = candidates[start:start + 5]
+        prices = [p for _, p, _ in window]
+        result = _identify_harmonic(*prices)
+        if result:
+            _, completion = result
+            score = 100 - completion
+            if score < best_score:
+                best_score = score
+                best_pts   = window
+
+    # Fallback: just use the last 5 alternating swings
+    if best_pts is None:
+        best_pts = alternating[-5:]
+
+    return [(p[0], p[1], lbl) for p, lbl in zip(best_pts, labels)]
 
 
 def build_chart(
@@ -126,13 +143,9 @@ def build_chart(
             h_color = "#ef5350" if is_bearish_pat else "#26a69a"
             fill_color = "rgba(239,83,80,0.08)" if is_bearish_pat else "rgba(38,166,154,0.08)"
 
-            # Filled polygon X→A→B→C→D→X
-            poly_x = x_coords + [x_coords[0]]
-            poly_y = prices    + [prices[0]]
+            # Zigzag lines X→A→B→C→D (no fill)
             fig.add_trace(go.Scatter(
-                x=poly_x, y=poly_y,
-                fill="toself",
-                fillcolor=fill_color,
+                x=x_coords, y=prices,
                 line=dict(color=h_color, width=1.5),
                 name=pname,
                 mode="lines",
